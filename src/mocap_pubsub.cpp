@@ -26,10 +26,10 @@ class MocapPublisher : public rclcpp::Node
     : Node("mocap_publisher"), count_(0)
     {
       // publisher
-      px4_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
+      px4_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("/VehicleVisualOdometry_PubSubTopic", 10);
 
       // timesync subscription
-      timesync_subscription_ = this->create_subscription<px4_msgs::msg::Timesync>("Timesync_PubSubTopic", 10,
+      timesync_subscription_ = this->create_subscription<px4_msgs::msg::Timesync>("/Timesync_PubSubTopic", 10,
         [this](const px4_msgs::msg::Timesync::UniquePtr msg) {
           timestamp_.store(msg->timestamp);
         });
