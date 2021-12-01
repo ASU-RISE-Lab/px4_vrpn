@@ -3,7 +3,14 @@ This package streams the vrpn data from Optitrack to PX4 using the appropriate t
 
 Package dependencies are _vrpn_client_ros_ and _px4_ros_com._ 
 
+Clone the repo under the `src` folder of your _colcon_ws_
+
 To build run:
 `cd <path/to/colcon_ws>`
 and 
 `colcon build --pacakegs-select px4_vrpn_pubsub`
+
+To run the node:
+`cd <path/to/colcon_ws>`
+and then
+`ros2 run px4_vrpn_pubsub mocap_pusub`
