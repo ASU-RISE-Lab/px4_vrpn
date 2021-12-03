@@ -1,5 +1,5 @@
 # px4_vrpn
-This package streams the vrpn data from Optitrack to PX4 using the appropriate transformations. 
+This is a ROS2 package that streams the VRPN data from Optitrack to PX4 using the appropriate transformations.  
 
 Package dependencies are _vrpn_client_ros_ and _px4_ros_com._ 
 
