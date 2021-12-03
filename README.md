@@ -13,4 +13,4 @@ and
 To run the node:
 `cd <path/to/colcon_ws>`
 and then
-`ros2 run px4_vrpn_pubsub mocap_pusub`
+`ros2 run px4_vrpn_pubsub mocap_pubsub`
