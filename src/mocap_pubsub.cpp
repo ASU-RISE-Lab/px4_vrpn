@@ -75,12 +75,22 @@ class MocapPublisher : public rclcpp::Node
 
       message.local_frame = 0;
 
-      message.x = x;
-      message.y = y;
-      message.z = z;
+      message.x = x_mocap;
+      message.y = -y_mocap;
+      message.z = -z_mocap;
 
-      message.q[0] = NAN; // if you have quaternion values, include here. Else set 1st element to NAN
+      // If you have quaternion values, include here. Else set 1st element to NAN
+      // message.q[0] = NAN; // uncomment this to set first element to NAN. 
+      message.q[0] = q_mocap[3];
+      message.q[1] = q_mocap[0];
+      message.q[2] = -q_mocap[1];
+      message.q[3] = -q_mocap[2];
       message.q_offset[0] = NAN;
+      
+      message.pose_covariance[0] = NAN;
+      message.pose_covariance[15] = NAN;
+      
+      message.velocity_frame = 0;
 
       message.vx = NAN;
       message.vy = NAN;
@@ -89,9 +99,12 @@ class MocapPublisher : public rclcpp::Node
       message.rollspeed = NAN;
       message.pitchspeed = NAN;
       message.yawspeed = NAN;
+      
+      message.velocity_covariance[0] = NAN;
+      message.velocity_covariance[15] = NAN; 
 
 
-      RCLCPP_INFO(this->get_logger(), "Publishing: '%f' '%f' '%f'", message.x, message.y, message.z);
+      // RCLCPP_INFO(this->get_logger(), "Publishing x y z: '%f' '%f' '%f'", message.x, message.y, message.z);
       px4_publisher_->publish(message);
     }
 
@@ -99,9 +112,15 @@ class MocapPublisher : public rclcpp::Node
     {
 
       // RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->pose.position.x);
-      x = msg->pose.position.x;
-      y = msg->pose.position.y;
-      z = msg->pose.position.z;
+      x_mocap = msg->pose.position.x;
+      y_mocap = msg->pose.position.y;
+      z_mocap = msg->pose.position.z;
+      
+      // storing quaternion values
+      q_mocap[0] = msg->pose.orientation.x;
+      q_mocap[1] = msg->pose.orientation.y;
+      q_mocap[2] = msg->pose.orientation.z;
+      q_mocap[3] = msg->pose.orientation.w;	
 
     }
 
@@ -114,9 +133,10 @@ class MocapPublisher : public rclcpp::Node
 
     size_t count_;
 
-    float x,y,z,vx,vy,vz,rollspeed,pitchspeed,yawspeed;
+    // float x_mocap,y_mocap,z_mocap,vx,vy,vz,rollspeed,pitchspeed,yawspeed;
+    float x_mocap,y_mocap,z_mocap;
 
-    Eigen::Vector4f q, q_offset; 
+    Eigen::Vector4f q_mocap; 
 };
 
 int main(int argc, char * argv[])
