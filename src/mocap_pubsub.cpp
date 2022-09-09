@@ -2,6 +2,8 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <stdlib.h>
+#include <cmath>
 
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
@@ -26,10 +28,10 @@ class MocapPublisher : public rclcpp::Node
     : Node("mocap_publisher"), count_(0)
     {
       // publisher
-      px4_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("/VehicleVisualOdometry_PubSubTopic", 10);
+      px4_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("fmu/vehicle_visual_odometry/in", 1);
 
       // timesync subscription
-      timesync_subscription_ = this->create_subscription<px4_msgs::msg::Timesync>("/Timesync_PubSubTopic", 10,
+      timesync_subscription_ = this->create_subscription<px4_msgs::msg::Timesync>("/fmu/timesync/out", 10,
         [this](const px4_msgs::msg::Timesync::UniquePtr msg) {
           timestamp_.store(msg->timestamp);
         });
@@ -75,6 +77,21 @@ class MocapPublisher : public rclcpp::Node
 
       message.local_frame = 0;
 
+      if (time_stamp == time_stamp_ref){
+        count++;
+      }
+      else{
+        count = 0;
+        time_stamp_ref = time_stamp;
+      }
+
+      if (count > 60){
+        RCLCPP_INFO(this->get_logger(), "MOCAP Failure - Exiting & Landing");
+        exit(0);
+      }
+
+      // Node exits if same time_stamp is realyed for 0.5 seconds (60 times = 1/2 of 120 Hz)
+
       message.x = x_mocap;
       message.y = -y_mocap;
       message.z = -z_mocap;
@@ -104,7 +121,7 @@ class MocapPublisher : public rclcpp::Node
       message.velocity_covariance[15] = NAN; 
 
 
-      // RCLCPP_INFO(this->get_logger(), "Publishing x y z: '%f' '%f' '%f'", message.x, message.y, message.z);
+      //RCLCPP_INFO(this->get_logger(), "Publishing x y z: '%f' '%f' '%f'", message.x, message.y, message.z);
       px4_publisher_->publish(message);
     }
 
@@ -112,6 +129,13 @@ class MocapPublisher : public rclcpp::Node
     {
 
       // RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->pose.position.x);
+
+      // RCLCPP_INFO(this->get_logger(), "I heard: '%f'", msg->header.stamp.sec);
+
+      time_stamp = msg->header.stamp.sec + msg->header.stamp.nanosec*1e-9;
+
+      RCLCPP_INFO(this->get_logger(), "Time_Stamp: '%f",time_stamp);
+
       x_mocap = msg->pose.position.x;
       y_mocap = msg->pose.position.y;
       z_mocap = msg->pose.position.z;
@@ -135,6 +159,11 @@ class MocapPublisher : public rclcpp::Node
 
     // float x_mocap,y_mocap,z_mocap,vx,vy,vz,rollspeed,pitchspeed,yawspeed;
     float x_mocap,y_mocap,z_mocap;
+    float x_position = 0.0, y_position = 0.0, z_position = 0.0;
+    
+    double time_stamp = 0.0 , time_stamp_ref = 0.0;
+
+    int count = 0;
 
     Eigen::Vector4f q_mocap; 
 };
