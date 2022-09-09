@@ -134,7 +134,7 @@ class MocapPublisher : public rclcpp::Node
 
       time_stamp = msg->header.stamp.sec + msg->header.stamp.nanosec*1e-9;
 
-      RCLCPP_INFO(this->get_logger(), "Time_Stamp: '%f",time_stamp);
+      // RCLCPP_INFO(this->get_logger(), "Time_Stamp: '%f",time_stamp);
 
       x_mocap = msg->pose.position.x;
       y_mocap = msg->pose.position.y;
