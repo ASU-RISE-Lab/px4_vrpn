@@ -85,7 +85,7 @@ class MocapPublisher : public rclcpp::Node
         time_stamp_ref = time_stamp;
       }
 
-      if (count > 60){
+      if (count > 180){
         RCLCPP_INFO(this->get_logger(), "MOCAP Failure - Exiting & Landing");
         exit(0);
       }
