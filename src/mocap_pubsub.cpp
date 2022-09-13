@@ -41,9 +41,13 @@ class MocapPublisher : public rclcpp::Node
 
       // Check if subscription is successfull and then initiate timer
       RCLCPP_INFO(this->get_logger(), "Waiting for first mocap message");
+
       rclcpp::WaitSet wait_set;
+
       wait_set.add_subscription(vrpn_subscription_);
+
       auto ret = wait_set.wait(std::chrono::seconds(100));
+      
       if (ret.kind() == rclcpp::WaitResultKind::Ready) {
         geometry_msgs::msg::PoseStamped msg; // if successfull, store data
         rclcpp::MessageInfo info;
@@ -90,7 +94,7 @@ class MocapPublisher : public rclcpp::Node
         exit(0);
       }
 
-      // Node exits if same time_stamp is realyed for 0.5 seconds (60 times = 1/2 of 120 Hz)
+      // Node exits if same time_stamp is realyed for 1.5 seconds (120 = 1 second)
 
       message.x = x_mocap;
       message.y = -y_mocap;
