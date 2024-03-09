@@ -58,7 +58,7 @@ class MocapPublisher : public rclcpp::Node
       //   RMW_QOS_POLICY_DURABILITY_VOLATILE
       // }
       // vrpn_subscription_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("/vrpn_mocap/RigidBody1/pose",10,std::bind(&MocapPublisher::topic_callback, this, _1));
-      vrpn_subscription_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("/vrpn_mocap/RigidBody1/pose", rclcpp::SensorDataQoS(), std::bind(&MocapPublisher::topic_callback, this, _1));
+      vrpn_subscription_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("/vrpn_mocap/JJ_UAV/pose", rclcpp::SensorDataQoS(), std::bind(&MocapPublisher::topic_callback, this, _1));
 
       // Check if subscription is successfull and then initiate timer
       RCLCPP_INFO(this->get_logger(), "Waiting for first mocap message");
@@ -102,7 +102,7 @@ class MocapPublisher : public rclcpp::Node
       message.timestamp_sample = timestamp_.load();
 
       // message.local_frame = 0;
-      message.pose_frame = 1;
+      message.pose_frame = 2;
 
       if (time_stamp == time_stamp_ref){
         count++;
@@ -127,11 +127,11 @@ class MocapPublisher : public rclcpp::Node
       message.position[2] = -z_mocap;
 
       // If you have quaternion values, include here. Else set 1st element to NAN
-      message.q[0] = NAN; // uncomment this to set first element to NAN. 
-      // message.q[0] = q_mocap[3];
-      // message.q[1] = q_mocap[0];
-      // message.q[2] = -q_mocap[1];
-      // message.q[3] = -q_mocap[2];
+      // message.q[0] = NAN; // uncomment this to set first element to NAN. 
+      message.q[0] = q_mocap[3];
+      message.q[1] = q_mocap[0];
+      message.q[2] = -q_mocap[1];
+      message.q[3] = -q_mocap[2];
       // message.q_offset[0] = NAN;
       
       // message.pose_covariance[0] = NAN;
