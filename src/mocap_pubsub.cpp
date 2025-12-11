@@ -7,8 +7,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <px4_msgs/msg/timesync.hpp>
-#include <px4_msgs/msg/vehicle_visual_odometry.hpp>
+// #include <px4_msgs/msg/timesync.hpp>
+#include <px4_msgs/msg/vehicle_odometry.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
@@ -28,50 +28,54 @@ class MocapPublisher : public rclcpp::Node
     : Node("mocap_publisher"), count_(0)
     {
       // publisher
-      px4_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("fmu/vehicle_visual_odometry/in", 1);
+      px4_publisher_ = this->create_publisher<px4_msgs::msg::VehicleOdometry>("fmu/in/vehicle_visual_odometry", 1);
 
       // timesync subscription
-      timesync_subscription_ = this->create_subscription<px4_msgs::msg::Timesync>("/fmu/timesync/out", 10,
-        [this](const px4_msgs::msg::Timesync::UniquePtr msg) {
-          timestamp_.store(msg->timestamp);
-        });
+      // timesync_subscription_ = this->create_subscription<px4_msgs::msg::Timesync>("/fmu/timesync/out", 10,
+      //   [this](const px4_msgs::msg::Timesync::UniquePtr msg) {
+      //     timestamp_.store(msg->timestamp);
+      //   });
 
       // vrpn subscription
-      vrpn_subscription_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("/RigidBody1/pose",10,std::bind(&MocapPublisher::topic_callback, this, _1));
+      rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+      auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
+      vrpn_subscription_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("/vrpn_mocap/JJ_QUAD/pose",qos,std::bind(&MocapPublisher::topic_callback, this, _1));
 
       // Check if subscription is successfull and then initiate timer
       RCLCPP_INFO(this->get_logger(), "Waiting for first mocap message");
 
-      rclcpp::WaitSet wait_set;
+      // rclcpp::WaitSet wait_set;
 
-      wait_set.add_subscription(vrpn_subscription_);
+      // wait_set.add_subscription(vrpn_subscription_);
 
-      auto ret = wait_set.wait(std::chrono::seconds(100));
+      // auto ret = wait_set.wait(std::chrono::seconds(100));
       
-      if (ret.kind() == rclcpp::WaitResultKind::Ready) {
-        geometry_msgs::msg::PoseStamped msg; // if successfull, store data
-        rclcpp::MessageInfo info;
-        auto ret_take = vrpn_subscription_->take(msg, info);
-        if (ret_take) {
-          RCLCPP_INFO(this->get_logger(), "heard vrpn, initializing px4_publisher now");
+      // if (ret.kind() == rclcpp::WaitResultKind::Ready) {
+      //   geometry_msgs::msg::PoseStamped msg; // if successfull, store data
+      //   rclcpp::MessageInfo info;
+      //   auto ret_take = vrpn_subscription_->take(msg, info);
+      //   if (ret_take) {
+      //     RCLCPP_INFO(this->get_logger(), "heard vrpn, initializing px4_publisher now");
           timer_ = this->create_wall_timer(
-            8ms, std::bind(&MocapPublisher::timer_callback, this));
-        } 
-        else {
-          RCLCPP_ERROR(this->get_logger(), "no message recieved from vrpn");
-        }
-      } 
-      else {
-        RCLCPP_ERROR(this->get_logger(), "couldn't wait for vrpn message");
-        return;
-      }
+            10ms, std::bind(&MocapPublisher::timer_callback, this));
+          RCLCPP_INFO(this->get_logger(), "Created timer callback");
+      //   } 
+      //   else {
+      //     RCLCPP_ERROR(this->get_logger(), "no message recieved from vrpn");
+      //   }
+      // } 
+      // else {
+      //   RCLCPP_ERROR(this->get_logger(), "couldn't wait for vrpn message");
+      //   return;
+      // }
 
     }
 
   private:
     void timer_callback()
     {
-      auto message = px4_msgs::msg::VehicleVisualOdometry();
+      // RCLCPP_INFO(this->get_logger(), "Entered timer callback");
+      auto message = px4_msgs::msg::VehicleOdometry();
 
       // message.timestamp = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()).time_since_epoch().count();
       message.timestamp = timestamp_.load();
@@ -79,7 +83,7 @@ class MocapPublisher : public rclcpp::Node
       // message.timestamp_sample = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()).time_since_epoch().count();
       message.timestamp_sample = timestamp_.load();
 
-      message.local_frame = 0;
+      message.pose_frame = 1;
 
       if (time_stamp == time_stamp_ref){
         count++;
@@ -96,9 +100,9 @@ class MocapPublisher : public rclcpp::Node
 
       // Node exits if same time_stamp is realyed for 1.5 seconds (120 = 1 second)
 
-      message.x = x_mocap;
-      message.y = -y_mocap;
-      message.z = -z_mocap;
+      message.position[0] = x_mocap;
+      message.position[1] = -y_mocap;
+      message.position[2] = -z_mocap;
 
       // If you have quaternion values, include here. Else set 1st element to NAN
       // message.q[0] = NAN; // uncomment this to set first element to NAN. 
@@ -106,26 +110,27 @@ class MocapPublisher : public rclcpp::Node
       message.q[1] = q_mocap[0];
       message.q[2] = -q_mocap[1];
       message.q[3] = -q_mocap[2];
-      message.q_offset[0] = NAN;
+      // message.q_offset[0] = NAN;
       
-      message.pose_covariance[0] = NAN;
-      message.pose_covariance[15] = NAN;
+      // message.pose_covariance[0] = NAN;
+      // message.pose_covariance[15] = NAN;
       
       message.velocity_frame = 0;
 
-      message.vx = NAN;
-      message.vy = NAN;
-      message.vz = NAN;
+      message.velocity[0] = NAN;
+      message.velocity[1] = NAN;
+      message.velocity[2] = NAN;
 
-      message.rollspeed = NAN;
-      message.pitchspeed = NAN;
-      message.yawspeed = NAN;
+      // message.angular_velocity[0] = NAN;
+      // message.angular_velocity[1] = NAN;
+      // message.angular_velocity[2] = NAN;
       
-      message.velocity_covariance[0] = NAN;
-      message.velocity_covariance[15] = NAN; 
+      // message.velocity_covariance[0] = NAN;
+      // message.velocity_covariance[15] = NAN; 
 
 
-      //RCLCPP_INFO(this->get_logger(), "Publishing x y z: '%f' '%f' '%f'", message.x, message.y, message.z);
+      // RCLCPP_INFO(this->get_logger(), "Publishing x y z: '%f' '%f' '%f'", message.x, message.y, message.z);
+      // RCLCPP_INFO(this->get_logger(), "Publishing mocap message");
       px4_publisher_->publish(message);
     }
 
@@ -153,8 +158,8 @@ class MocapPublisher : public rclcpp::Node
     }
 
     rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Publisher<px4_msgs::msg::VehicleVisualOdometry>::SharedPtr px4_publisher_;
-    rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr timesync_subscription_;
+    rclcpp::Publisher<px4_msgs::msg::VehicleOdometry>::SharedPtr px4_publisher_;
+    // rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr timesync_subscription_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr vrpn_subscription_;
 
     std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
